@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101827">
+<title>Snake Game PRO — Aryan Edition</title>
+<style>
+:root{--bg:#101827;--panel:#182438;--text:#f3f7ff;--muted:#aab8ce;--accent:#67f59a;--board:#0b1220;--line:#1c2b42}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top,#1b2d49,var(--bg) 55%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;min-height:100vh;padding:14px}
+.app{max-width:560px;margin:0 auto}
+header{text-align:center;margin:4px 0 12px}
+h1{font-size:clamp(24px,6vw,34px);margin:0;font-weight:900;letter-spacing:.4px}
+h1 span{color:var(--accent)}
+.sub{font-size:12px;color:var(--muted);margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.stat,.panel{background:rgba(24,36,56,.94);border:1px solid #2b3b54;border-radius:14px;padding:10px;text-align:center}
+.stat small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+.stat strong{display:block;font-size:22px;margin-top:2px}
+canvas{width:100%;aspect-ratio:1/1;display:block;border:2px solid #31445f;border-radius:15px;background:var(--board);touch-action:none;box-shadow:0 12px 30px #0004}
+.toolbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+button,select{border:1px solid #3a4e6b;background:#24344c;color:var(--text);padding:11px 8px;border-radius:11px;font-weight:750;font-size:13px;cursor:pointer}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.6;cursor:default}
+.primary{background:var(--accent);color:#102117;border-color:var(--accent)}
+.controls{width:190px;margin:10px auto 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.controls button{font-size:22px;padding:10px 0;min-height:48px}
+.controls .empty{visibility:hidden}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.panel{text-align:left;padding:12px}
+.panel h2{font-size:15px;margin:0 0 8px}
+.panel p{font-size:12px;color:var(--muted);margin:6px 0}
+.row{display:flex;gap:7px;align-items:center;margin-top:8px}
+.row select{width:100%;min-width:0}
+.row button{flex:1}
+.shop-list{display:grid;gap:7px}
+.shop-item{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12px}
+.shop-item button{padding:7px 8px;font-size:11px}
+.notice{color:var(--muted);font-size:11px;text-align:center;line-height:1.5;margin:12px 0 4px}
+.overlay{position:fixed;inset:0;background:#050a13c9;display:none;align-items:center;justify-content:center;padding:20px;z-index:10}
+.overlay.show{display:flex}
+.modal{background:#182438;border:1px solid #3a4e6b;border-radius:18px;max-width:340px;width:100%;padding:22px;text-align:center;box-shadow:0 20px 70px #0008}
+.modal h2{margin:0 0 8px;font-size:25px}
+.modal p{color:var(--muted);font-size:14px}
+.modal .row{justify-content:center}
+@media(max-width:390px){body{padding:9px}.toolbar{gap:5px}.toolbar button{font-size:11px;padding:10px 4px}.panels{grid-template-columns:1fr}.stat strong{font-size:19px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+<h1>🐍 Snake Game <span>PRO</span></h1>
+<div class="sub">ARYAN EDITION • Collect food • Buy 20 snakes • Complete 100 levels</div>
+</header>
+
+<div class="stats">
+<div class="stat"><small>Score</small><strong id="score">0</strong></div>
+<div class="stat"><small>Best</small><strong id="best">0</strong></div>
+<div class="stat"><small>🪙 Coins</small><strong id="coins">0</strong></div>
+<div class="stat"><small>🏆 Level</small><strong id="level">1/100</strong></div>
+</div>
+
+<canvas id="game" width="480" height="480" aria-label="Snake game board"></canvas>
+
+<div class="toolbar">
+<button class="primary" id="startBtn">▶ Start</button>
+<button id="pauseBtn">⏸ Pause</button>
+<button id="restartBtn">↻ Restart</button>
+<button id="soundBtn">🔊 Sound ON</button>
+</div>
+
+<div class="controls" aria-label="Touch controls">
+<span class="empty"></span><button data-dir="up">▲</button><span class="empty"></span>
+<button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
+</div>
+
+<div class="panels">
+<section class="panel">
+<h2>⚙️ Game settings</h2>
+<p>Choose your challenge and world.</p>
+<div class="row">
+<select id="difficulty">
+<option value="easy">Easy</option>
+<option value="medium" selected>Medium</option>
+<option value="hard">Hard</option>
+</select>
+</div>
+<div class="row">
+<select id="theme">
+<option value="night">🌌 Night theme</option>
+<option value="forest">🌲 Forest theme</option>
+<option value="desert">🏜️ Desert theme</option>
+</select>
+</div>
+<div class="row"><button id="livesBtn">❤️ Lives: 3</button></div>
+</section>
+
+<section class="panel">
+<h2>🛒 Snake skin shop</h2>
+<p>Buy 20 different snake colours with coins. Every 5 foods = next level. Skins save on this device.</p>
+<div class="shop-list" id="shop"></div>
+</section>
+</div>
+
+<div class="notice">
+Controls: arrow keys / WASD or swipe on the board.
+Your score, coins and unlocked skins save on this device.
+</div>
+</div>
+
+<div class="overlay" id="overlay">
+<div class="modal">
+<h2 id="modalTitle">Ready?</h2>
+<p id="modalText">Tap Start to play.</p>
+<div class="row">
+<button class="primary" id="modalMain">▶ Start game</button>
+<button id="modalClose">Close</button>
+</div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+const N=24,CELL=canvas.width/N;
+
+const skins=[
+{id:'green',name:'Classic Green',color:'#63f58d',price:0},
+{id:'blue',name:'Electric Blue',color:'#55c8ff',price:30},
+{id:'gold',name:'Golden Snake',color:'#ffd34e',price:60},
+{id:'purple',name:'Neon Purple',color:'#c18aff',price:90},
+{id:'pink',name:'Cyber Pink',color:'#ff75c8',price:120},
+{id:'red',name:'Fire Snake',color:'#ff5252',price:150},
+{id:'ice',name:'Ice Snake',color:'#a8f0ff',price:180},
+{id:'lime',name:'Toxic Lime',color:'#b7ff38',price:210},
+{id:'orange',name:'Magma Snake',color:'#ff9638',price:240},
+{id:'white',name:'Ghost Snake',color:'#f1f5f9',price:270},
+{id:'teal',name:'Aqua Snake',color:'#20d6c7',price:300},
+{id:'rainbow',name:'Royal Violet',color:'#a78bfa',price:350},
+{id:'copper',name:'Copper Snake',color:'#d88955',price:400},
+{id:'mint',name:'Mint Snake',color:'#7df7c2',price:450},
+{id:'coral',name:'Coral Snake',color:'#ff7f7f',price:500},
+{id:'silver',name:'Silver Snake',color:'#cbd5e1',price:600},
+{id:'ruby',name:'Ruby Snake',color:'#e11d48',price:700},
+{id:'sapphire',name:'Sapphire Snake',color:'#2563eb',price:800},
+{id:'emerald',name:'Emerald Snake',color:'#059669',price:900},
+{id:'legend',name:'Legend Snake',color:'#facc15',price:1200}
+];
+
+const saved=(key,def)=>{
+try{
+const x=localStorage.getItem(key);
+return x===null?def:JSON.parse(x);
+}catch(e){return def;}
+};
+
+let coins=saved('snakeProCoins',0);
+let best=saved('snakeProBest',0);
+let unlocked=saved('snakeProUnlocked',['green']);
+let selected=saved('snakeProSkin','green');
+
+if(!unlocked.includes('green'))unlocked.push('green');
+if(!skins.some(s=>s.id===selected))selected='green';
+
+let snake=[];
+let food={x:12,y:12};
+let dir={x:1,y:0};
+let nextDir={x:1,y:0};
+let score=0,lives=3;
+let running=false,paused=false,over=false;
+let sound=true,loop=null;
+
+const levelNow=()=>Math.min(100,Math.floor(score/5)+1);
+
+let audioCtx=null;
+
+const themes={
+night:{bg:'#0b1220',grid:'#17243a',food:'#ff5d73'},
+forest:{bg:'#0c1b16',grid:'#183529',food:'#ffb454'},
+desert:{bg:'#241b12',grid:'#3b2c1b',food:'#ff6b4a'}
+};
+
+function persist(){
+localStorage.setItem('snakeProCoins',JSON.stringify(coins));
+localStorage.setItem('snakeProBest',JSON.stringify(best));
+localStorage.setItem('snakeProUnlocked',JSON.stringify(unlocked));
+localStorage.setItem('snakeProSkin',JSON.stringify(selected));
+}
+
+function beep(freq=500,duration=.07,type='sine'){
+if(!sound)return;
+try{
+audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();
+const o=audioCtx.createOscillator();
+const g=audioCtx.createGain();
+o.type=type;
+o.frequency.value=freq;
+g.gain.setValueAtTime(.07,audioCtx.currentTime);
+g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);
+o.connect(g);
+g.connect(audioCtx.destination);
+o.start();
+o.stop(audioCtx.currentTime+duration);
+}catch(e){}
+}
+
+function speed(){
+const base={easy:190,medium:145,hard:105}[$('difficulty').value]||145;
+return Math.max(58,base-Math.floor(score/4)*4);
+}
+
+function newFood(){
+let p;
+do{
+p={x:Math.floor(Math.random()*N),y:Math.floor(Math.random()*N)};
+}while(snake.some(s=>s.x===p.x&&s.y===p.y));
+food=p;
+}
+
+function reset(){
+snake=[{x:7,y:12},{x:6,y:12},{x:5,y:12}];
+dir={x:1,y:0};
+nextDir={x:1,y:0};
+score=0;
+lives=3;
+running=false;
+paused=false;
+over=false;
+newFood();
+updateUI();
+draw();
+showModal('Snake Game PRO','Tap Start to begin your run.','▶ Start game');
+clearInterval(loop);
+}
+
+function start(){
+if(over)resetStateOnly();
+if(running&&!paused)return;
+running=true;
+paused=false;
+hideModal();
+schedule();
+beep(620,.08);
+}
+
+function resetStateOnly(){
+snake=[{x:7,y:12},{x:6,y:12},{x:5,y:12}];
+dir={x:1,y:0};
+nextDir={x:1,y:0};
+score=0;
+lives=3;
+over=false;
+newFood();
+updateUI();
+}
+
+function schedule(){
+clearInterval(loop);
+loop=setInterval(tick,speed());
+}
+
+function pause(){
+if(!running||over)return;
+paused=!paused;
+if(paused){
+clearInterval(loop);
+showModal('Paused','Your game is paused. Resume when ready.','▶ Resume');
+$('pauseBtn').textContent='▶ Resume';
+}else{
+hideModal();
+$('pauseBtn').textContent='⏸ Pause';
+schedule();
+}
+}
+
+function tick(){
+if(!running||paused||over)return;
+
+dir=nextDir;
+const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+
+const wall=head.x<0||head.y<0||head.x>=N||head.y>=N;
+const self=snake.some((s,i)=>i<snake.length-1&&s.x===head.x&&s.y===head.y);
+
+if(wall||self){
+lives--;
+beep(140,.22,'sawtooth');
+
+if(lives<=0){
+endGame();
+return;
+}
+
+snake=[{x:7,y:12},{x:6,y:12},{x:5,y:12}];
+dir={x:1,y:0};
+nextDir={x:1,y:0};
+updateUI();
+draw();
+return;
+}
+
+snake.unshift(head);
+
+if(head.x===food.x&&head.y===food.y){
+score++;
+coins++;
+
+if(score%5===0)coins+=3;
+
+if(score>best){
+best=score;
+}
+
+beep(760,.08);
+newFood();
+updateUI();
+schedule();
+}else{
+snake.pop();
+}
+
+draw();
+}
+
+function endGame(){
+running=false;
+over=true;
+clearInterval(loop);
+updateUI();
+beep(100,.4,'sawtooth');
+showModal('Game Over!',`Score: ${score} • Best: ${best} • Coins: ${coins}`,'↻ Play again');
+}
+
+function setDirection(name){
+const map={
+up:{x:0,y:-1},
+down:{x:0,y:1},
+left:{x:-1,y:0},
+right:{x:1,y:0}
+};
+
+const d=map[name];
+if(!d)return;
+if(d.x===-dir.x&&d.y===-dir.y)return;
+nextDir=d;
+}
+
+function draw(){
+const theme=themes[$('theme').value]||themes.night;
+
+ctx.fillStyle=theme.bg;
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+ctx.strokeStyle=theme.grid;
+ctx.lineWidth=1;
+
+for(let i=0;i<=N;i++){
+ctx.beginPath();
+ctx.moveTo(i*CELL,0);
+ctx.lineTo(i*CELL,canvas.height);
+ctx.stroke();
+
+ctx.beginPath();
+ctx.moveTo(0,i*CELL);
+ctx.lineTo(canvas.width,i*CELL);
+ctx.stroke();
+}
+
+const fx=(food.x+.5)*CELL;
+const fy=(food.y+.5)*CELL;
+
+ctx.shadowBlur=14;
+ctx.shadowColor=theme.food;
+ctx.fillStyle=theme.food;
+ctx.beginPath();
+ctx.arc(fx,fy,CELL*.34,0,Math.PI*2);
+ctx.fill();
+ctx.shadowBlur=0;
+
+const skin=skins.find(s=>s.id===selected)||skins[0];
+
+snake.forEach((s,i)=>{
+const pad=i===0?2:3;
+const x=s.x*CELL+pad;
+const y=s.y*CELL+pad;
+const w=CELL-pad*2;
+
+ctx.fillStyle=i===0?'#f4fff7':skin.color;
+ctx.beginPath();
+ctx.roundRect(x,y,w,w,5);
+ctx.fill();
+
+if(i===0){
+ctx.fillStyle='#102117';
+let ex=x+w*.32,ey=y+w*.33;
+ctx.beginPath();
+ctx.arc(ex,ey,2.2,0,Math.PI*2);
+ctx.arc(x+w*.68,ey,2.2,0,Math.PI*2);
+ctx.fill();
+}
+});
+
+if(!running&&!over&&!paused){
+ctx.fillStyle='#ffffffb8';
+ctx.font='bold 18px system-ui';
+ctx.textAlign='center';
+ctx.fillText('TAP START TO PLAY',canvas.width/2,canvas.height-18);
+}
+}
+
+function updateUI(){
+$('score').textContent=score;
+$('best').textContent=best;
+$('coins').textContent=coins;
+$('level').textContent=levelNow()+'/100';
+$('livesBtn').textContent='❤️ Lives: '+lives;
+renderShop();
+persist();
+}
+
+function renderShop(){
+const shop=$('shop');
+shop.innerHTML='';
+
+skins.forEach(s=>{
+const item=document.createElement('div');
+item.className='shop-item';
+
+const label=document.createElement('span');
+label.textContent='● '+s.name;
+label.style.color=s.color;
+
+const b=document.createElement('button');
+
+if(selected===s.id)b.textContent='Selected';
+else if(unlocked.includes(s.id))b.textContent='Use';
+else b.textContent='🪙 '+s.price;
+
+b.disabled=selected===s.id;
+
+b.addEventListener('click',()=>{
+if(unlocked.includes(s.id)){
+selected=s.id;
+beep(600,.06);
+updateUI();
+draw();
+}
+else if(coins>=s.price){
+coins-=s.price;
+unlocked.push(s.id);
+selected=s.id;
+beep(850,.1);
+updateUI();
+draw();
+}
+else{
+showModal('Not enough coins',
+`You need ${s.price-coins} more coin(s). Eat more food to earn coins.`,
+'Keep playing');
+}
+});
+
+item.append(label,b);
+shop.append(item);
+});
+}
+
+function showModal(title,body,button){
+$('modalTitle').textContent=title;
+$('modalText').textContent=body;
+$('modalMain').textContent=button;
+$('overlay').classList.add('show');
+}
+
+function hideModal(){
+$('overlay').classList.remove('show');
+}
+
+$('startBtn').addEventListener('click',start);
+$('pauseBtn').addEventListener('click',pause);
+
+$('restartBtn').addEventListener('click',()=>{
+reset();
+start();
+});
+
+$('soundBtn').addEventListener('click',()=>{
+sound=!sound;
+$('soundBtn').textContent=sound?'🔊 Sound ON':'🔇 Sound OFF';
+if(sound)beep(600,.07);
+});
+
+$('theme').addEventListener('change',draw);
+
+$('difficulty').addEventListener('change',()=>{
+if(running&&!paused)schedule();
+});
+
+$('livesBtn').addEventListener('click',()=>{
+showModal('Lives','You start each new game with 3 lives.','Got it');
+});
+
+$('modalMain').addEventListener('click',()=>{
+if(over)resetStateOnly();
+start();
+});
+
+$('modalClose').addEventListener('click',()=>{
+hideModal();
+if(paused){
+paused=false;
+running=true;
+schedule();
+$('pauseBtn').textContent='⏸ Pause';
+}
+});
+
+document.querySelectorAll('[data-dir]').forEach(b=>{
+b.addEventListener('click',()=>setDirection(b.dataset.dir));
+});
+
+document.addEventListener('keydown',e=>{
+const k=e.key.toLowerCase();
+
+const map={
+arrowup:'up',w:'up',
+arrowdown:'down',s:'down',
+arrowleft:'left',a:'left',
+arrowright:'right',d:'right'
+};
+
+if(map[k]){
+e.preventDefault();
+setDirection(map[k]);
+}
+
+if(k===' '){
+e.preventDefault();
+pause();
+}
+});
+
+let touchX=0,touchY=0;
+
+canvas.addEventListener('touchstart',e=>{
+const t=e.changedTouches[0];
+touchX=t.clientX;
+touchY=t.clientY;
+},{passive:true});
+
+canvas.addEventListener('touchend',e=>{
+const t=e.changedTouches[0];
+const dx=t.clientX-touchX;
+const dy=t.clientY-touchY;
+
+if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;
+
+if(Math.abs(dx)>Math.abs(dy))
+setDirection(dx>0?'right':'left');
+else
+setDirection(dy>0?'down':'up');
+},{passive:true});
+
+reset();
+
+})();
+</script>
+</body>
+</html>
